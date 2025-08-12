@@ -13,6 +13,7 @@
 #include <limits.h>
 #include "mlx.h"
 
+
 #define Z_NEAR 0.1f
 #define Z_FAR 100.0f
 
@@ -21,6 +22,7 @@ int     quit_prog(t_data *data);
 void	my_mlx_pixel_put(t_img *data, int x, int y, int color);
 int     deal_key(int key, t_data *data);\
 int 	release_key(int key, t_data *data);
+int		mouse_hook(int click, int x, int y, t_data *data);
 void	clear_img(t_img *img);
 t_data	*static_data(t_data *data);
 
@@ -32,6 +34,6 @@ void	project_vertex(t_cof *in, float *x, float *y, float *nz);
 void	do_rotations(t_data *data);
 void	rotate_x(t_vertex *vertex, float angle);
 void	rotate_y(t_vertex *vertex, float angle);
-void	rotate_z(t_vertex *vertex);
+void	rotate_z(t_vertex *vertex, float angle);
 
 #endif

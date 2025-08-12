@@ -8,6 +8,7 @@ MLXFLAGS = -lmlx -L$(MLX_PATH) -lXext -lX11 -lm
 
 SRCS = 	srcs/main.c \
 		srcs/key_hooks.c \
+		srcs/mouse_hooks.c \
 		srcs/mlx_utils.c \
 		srcs/parsing.c \
 		srcs/calculs.c \

@@ -10,6 +10,10 @@ int release_key(int key, t_data *data)
     data->sett->right_arr = 0;
   if (key == 65364)
     data->sett->down_arr = 0;
+  if (key == 'z')
+    data->sett->z = 0;
+  if (key == 'x')
+    data->sett->x = 0;
   return 1;
 }
 
@@ -25,6 +29,10 @@ int deal_key(int key, t_data *data)
     data->sett->right_arr = 1;
   if (key == 65364)
     data->sett->down_arr = 1;
+  if (key == 'z')
+    data->sett->z = 1;
+  if (key == 'x')
+    data->sett->x = 1;
   if (key == 'b')
   {
     if (data->sett->bfc)

@@ -66,6 +66,9 @@ typedef struct settings
     int right_arr;
     int up_arr;
     int down_arr;
+    int z;
+    int x;
+    float   camera;
 }   t_sett;
 
 typedef struct data

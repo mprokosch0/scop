@@ -138,7 +138,7 @@ int is_in_sight(t_data *data, int index)
         &vertex->co[faces->faces[index][2]]);
     t_cof view_dir = {vertex->co[faces->faces[index][0]].x,
         vertex->co[faces->faces[index][0]].y,
-        vertex->co[faces->faces[index][0]].z + 5.0f};
+        vertex->co[faces->faces[index][0]].z + data->sett->camera};
     if (norm.x * view_dir.x + norm.y * view_dir.y + norm.z * view_dir.z < 0.0f)
         return 1;
     return 0;
@@ -209,7 +209,7 @@ int main(int ac, char **av)
     data.mlx->img = &(t_img){0, 0, 0, 0, 0, 1080, 1920};
     data.obj = &(t_obj){0, 0, {{INFINITY}}};
     data.obj->faces = &(t_faces){0, 0, 0};
-    data.sett = &(t_sett){1, 0, 0, 0, 0};
+    data.sett = &(t_sett){1, 0, 0, 0, 0, 0, 0, 5.0f};
     data.obj->vertex = &(t_vertex){0, 0};
     if (!parsing(&data, av[1]))
         return 2 ;
@@ -223,6 +223,7 @@ int main(int ac, char **av)
     mlx_hook(data.mlx->win, 17, 0, quit_prog, &data);
     mlx_hook(data.mlx->win, 2, (1L << 0), deal_key, &data);
     mlx_key_hook(data.mlx->win, release_key, &data);
+    mlx_mouse_hook(data.mlx->win, mouse_hook, &data);
     mlx_loop_hook(data.mlx->mlx, display_loop, &data);
     mlx_loop(data.mlx->mlx);
 }

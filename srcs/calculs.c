@@ -80,8 +80,10 @@ void project_vertex(t_cof *in, float *x, float *y, float *z)
     float fov = 90.0f;
     float aspect = (float)WIDTH / HEIGHT;
     float f = 1.0f / tanf((fov * 0.5f) * (PI / 180.0f));
+	t_data *data;
 
-    float nz = in->z + 5.0f;
+	data = static_data(NULL);
+    float nz = in->z + data->sett->camera;
     if (nz <= 0.1f)
         nz = 0.1f;
 
@@ -103,6 +105,10 @@ void	do_rotations(t_data *data)
 		rotate_x(data->obj->vertex, -0.02);
 	if (data->sett->down_arr)
 		rotate_x(data->obj->vertex, 0.02);
+	if (data->sett->z)
+		rotate_z(data->obj->vertex, -0.02);
+	if (data->sett->x)
+		rotate_z(data->obj->vertex, 0.02);
 }
 
 void	rotate_x(t_vertex *vertex, float angle)
@@ -133,14 +139,14 @@ void	rotate_y(t_vertex *vertex, float angle)
 	}
 }
 
-void	rotate_z(t_vertex *vertex)
+void	rotate_z(t_vertex *vertex, float angle)
 {
 	float tmp[2];
 
 	for (int i = 0; i < vertex->nb_vertex; i++)
 	{
-		tmp[0] = vertex->co[i].x * cosf(0.007f) - vertex->co[i].y * sinf(0.007f);
-		tmp[1] = vertex->co[i].x * sinf(0.007f) + vertex->co[i].y * cosf(0.007f);
+		tmp[0] = vertex->co[i].x * cosf(angle) - vertex->co[i].y * sinf(angle);
+		tmp[1] = vertex->co[i].x * sinf(angle) + vertex->co[i].y * cosf(angle);
 		vertex->co[i].x = tmp[0];
 		vertex->co[i].y = tmp[1];
 	}
