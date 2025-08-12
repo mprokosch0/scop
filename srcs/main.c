@@ -169,10 +169,11 @@ int display_loop(t_data *data)
 
     clear_img(data->mlx->img);
     reset_z_buffer(data->obj);
+    do_rotations(data);
     for (int i = 0; i < faces->nb_faces; i++)
     {
-        t_cof min = {INT_MAX, INT_MAX, 0};
-        t_cof max = {INT_MIN, INT_MIN, 0};
+        t_cof min = {(float)INT_MAX, (float)INT_MAX, 0};
+        t_cof max = {(float)INT_MIN, (float)INT_MIN, 0};
         fill_min_max(&min, &max, data, i);
         for (int x = (int)min.x; x <= (int)max.x; x++)
         {
@@ -208,7 +209,7 @@ int main(int ac, char **av)
     data.mlx->img = &(t_img){0, 0, 0, 0, 0, 1080, 1920};
     data.obj = &(t_obj){0, 0, {{INFINITY}}};
     data.obj->faces = &(t_faces){0, 0, 0};
-    data.sett = &(t_sett){1};
+    data.sett = &(t_sett){1, 0, 0, 0, 0};
     data.obj->vertex = &(t_vertex){0, 0};
     if (!parsing(&data, av[1]))
         return 2 ;
@@ -221,6 +222,7 @@ int main(int ac, char **av)
     mlx_put_image_to_window(data.mlx->mlx, data.mlx->win, data.mlx->img->img, 0, 0);
     mlx_hook(data.mlx->win, 17, 0, quit_prog, &data);
     mlx_hook(data.mlx->win, 2, (1L << 0), deal_key, &data);
+    mlx_key_hook(data.mlx->win, release_key, &data);
     mlx_loop_hook(data.mlx->mlx, display_loop, &data);
     mlx_loop(data.mlx->mlx);
 }

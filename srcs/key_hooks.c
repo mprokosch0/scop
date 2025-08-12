@@ -1,17 +1,30 @@
 #include "scop.h"
 
+int release_key(int key, t_data *data)
+{
+  if (key == 65361)
+   data->sett->left_arr = 0;
+  if (key == 65362)
+    data->sett->up_arr = 0;
+  if (key == 65363)
+    data->sett->right_arr = 0;
+  if (key == 65364)
+    data->sett->down_arr = 0;
+  return 1;
+}
+
 int deal_key(int key, t_data *data)
 {
   if (key == 65307)
 		quit_prog(data);
   if (key == 65361)
-    rotate_y(data->obj->vertex, -0.02);
+    data->sett->left_arr = 1;
   if (key == 65362)
-    rotate_x(data->obj->vertex, -0.02);
+    data->sett->up_arr = 1;
   if (key == 65363)
-    rotate_y(data->obj->vertex, 0.02);
+    data->sett->right_arr = 1;
   if (key == 65364)
-    rotate_x(data->obj->vertex, 0.02);
+    data->sett->down_arr = 1;
   if (key == 'b')
   {
     if (data->sett->bfc)

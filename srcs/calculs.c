@@ -93,6 +93,18 @@ void project_vertex(t_cof *in, float *x, float *y, float *z)
 	*z = nz;
 }
 
+void	do_rotations(t_data *data)
+{
+	if (data->sett->left_arr)
+		rotate_y(data->obj->vertex, -0.02);
+	if (data->sett->right_arr)
+		rotate_y(data->obj->vertex, 0.02);
+	if (data->sett->up_arr)
+		rotate_x(data->obj->vertex, -0.02);
+	if (data->sett->down_arr)
+		rotate_x(data->obj->vertex, 0.02);
+}
+
 void	rotate_x(t_vertex *vertex, float angle)
 {
 	float tmp[2];
