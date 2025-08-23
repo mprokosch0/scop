@@ -2,24 +2,14 @@ NAME = scop
 
 CC = cc
 
-CFLAGS = -Wall -Wextra -Werror -Iincludes -O3 -I$(MLX_PATH) -I$(LIBFT_PATH) -g
+CFLAGS = -Wall -Wextra -Werror -Iincludes -O3 -I$(LIBFT_PATH) -g
 
-MLXFLAGS = -lmlx -L$(MLX_PATH) -lXext -lX11 -lm 
+LDFLAGS = -lglfw -lGLEW -lGL -lm
 
-SRCS = 	srcs/main.c \
-		srcs/key_hooks.c \
-		srcs/mouse_hooks.c \
-		srcs/mlx_utils.c \
-		srcs/parsing.c \
-		srcs/calculs.c \
-		
+SRCS = 	srcs/main.c srcs/parsing.c srcs/rotate.c\
 
 OBJ_DIR = obj
 OBJS = $(SRCS:%.c=$(OBJ_DIR)/%.o)
-OBJS_BONUS = $(SRCS_BONUS:%.c=$(OBJ_DIR)/%.bonus.o)
-
-MLX_PATH = ./minilibx-linux
-MLX = $(MLX_PATH)/libmlx.a
 
 LIBFT_PATH = ./libft
 LIBFT = $(LIBFT_PATH)/libft.a
@@ -35,20 +25,8 @@ $(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJ_DIR)/%.bonus.o: %.c
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(NAME): $(OBJS) $(LIBFT) $(MLX)
-	@$(CC) $(CFLAGS) -o $(NAME) $(OBJS) $(MLX) $(LIBFT) $(MLXFLAGS)
-
-bonus: $(OBJS_BONUS) $(LIBFT) $(MLX)
-	@$(CC) $(CFLAGS) -o $(NAME) $(OBJS_BONUS) $(MLX) $(LIBFT) $(MLXFLAGS)
-
-$(MLX):
-	@echo "$(GREEN)Compiling the MinilibX ..."
-	@make -sC $(MLX_PATH)
-	@echo "$(GREEN)Compiling Complete !$(WHITE)"
+$(NAME): $(OBJS) $(LIBFT)
+	@$(CC) $(CFLAGS) -o $(NAME) $(OBJS) $(LIBFT) $(LDFLAGS)
 
 $(LIBFT):
 	@echo "$(GREEN)Compiling the Libft ..."
@@ -57,10 +35,8 @@ $(LIBFT):
 
 clean:
 	@echo "$(BLUE)Removing objects files ..."
-	@make -sC $(MLX_PATH) clean
 	@make -sC $(LIBFT_PATH) clean
 	@rm -rf $(OBJ_DIR)
-	@rm -rf $(OBJ_DIR)/*.bonus.o
 	@echo "$(BLUE)Removing Complete !$(WHITE)"
 
 fclean: clean

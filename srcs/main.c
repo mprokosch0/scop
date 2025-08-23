@@ -1,229 +1,219 @@
 
 #include "scop.h"
 
-void    reset_z_buffer(t_obj *obj)
+GLuint compileShader(const char* source, GLenum type)
 {
-    for (int i = 0; i < HEIGHT; i++)
-        for (int j = 0; j < WIDTH; j++)
-            obj->z_buffer[i][j] = INFINITY;
-}
+    GLuint shader = glCreateShader(type);
+    glShaderSource(shader, 1, &source, NULL);
+    glCompileShader(shader);
 
-float interpolate_z_triangle(t_cof *v0, t_cof *v1, t_cof *v2, float x, float y)
-{
-    float x1 = v0->x, y1 = v0->y, z1 = v0->z;
-    float x2 = v1->x, y2 = v1->y, z2 = v1->z;
-    float x3 = v2->x, y3 = v2->y, z3 = v2->z;
-
-    float area = ((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1));
-    if (area == 0)
-        return -1;
-    float w1 = ((x2 - x) * (y3 - y) - (x3 - x) * (y2 - y)) / area;
-    float w2 = ((x3 - x) * (y1 - y) - (x1 - x) * (y3 - y)) / area;
-    float w3 = ((x1 - x) * (y2 - y) - (x2 - x) * (y1 - y)) / area;
-    if (w1 < 0 || w2 < 0 || w3 < 0)
-        return -1;
-    float sum = w1 + w2 + w3;
-    w1 /= sum;
-    w2 /= sum;
-    w3 /= sum;
-    return w1 * z1 + w2 * z2 + w3 * z3;
-}
-
-
-float z_interpolate(t_data *data, int x, int y, int index)
-{
-    t_vertex *vertex = data->obj->vertex;
-    t_faces *faces = data->obj->faces;
-    float close = INFINITY;
-    int *face = faces->faces[index];
-    int n = faces->nb_points[index];
-
-    for (int i = 1; i < n - 1; i++)
+    int success;
+    char infoLog[512];
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if(!success)
     {
-        t_cof v0 = {0}, v1 = {0}, v2 = {0};
-        project_vertex(&vertex->co[face[0]], &v0.x, &v0.y, &v0.z);
-        project_vertex(&vertex->co[face[i]], &v1.x, &v1.y, &v1.z);
-        project_vertex(&vertex->co[face[i + 1]], &v2.x, &v2.y, &v2.z);
-        float z = interpolate_z_triangle(&v0, &v1, &v2, x, y);
-        if (z != -1 && z < close)
-            close = z;
+        glGetShaderInfoLog(shader, 512, NULL, infoLog);
+        fprintf(stderr, "ERROR::SHADER::COMPILATION_FAILED\n%s\n", infoLog);
     }
-    return close;
+    return shader;
 }
 
-void    fill_min_max(t_cof *min, t_cof *max, t_data *data, int index)
+GLuint createShaderProgram(const char* vertexSrc, const char* fragmentSrc)
 {
-    t_vertex *vertex = data->obj->vertex;
-    t_faces *faces = data->obj->faces;
+    GLuint vertex = compileShader(vertexSrc, GL_VERTEX_SHADER);
+    GLuint fragment = compileShader(fragmentSrc, GL_FRAGMENT_SHADER);
 
-    for (int j = 0; j < faces->nb_points[index]; j++)
+    GLuint program = glCreateProgram();
+    glAttachShader(program, vertex);
+    glAttachShader(program, fragment);
+    glLinkProgram(program);
+
+    int success;
+    char infoLog[512];
+    glGetProgramiv(program, GL_LINK_STATUS, &success);
+    if(!success)
     {
-        float x, y, z;
-        project_vertex(&vertex->co[faces->faces[index][j]], &x, &y, &z);
-        if (x < min->x)
-            min->x = x;
-        if (x > max->x)
-            max->x = x;
-        if (y < min->y)
-            min->y = y;
-        if (y > max->y)
-            max->y = y;
+        glGetProgramInfoLog(program, 512, NULL, infoLog);
+        fprintf(stderr, "ERROR::PROGRAM::LINK_FAILED\n%s\n", infoLog);
     }
+
+    glDeleteShader(vertex);
+    glDeleteShader(fragment);
+    return program;
 }
 
-int winding_number(t_data *data, int x, int y, int index)
+int	initiate_window(GLFWwindow **window, char *str)
 {
-    t_vertex *vertex = data->obj->vertex;
-    t_faces *faces = data->obj->faces;
-    int n = faces->nb_points[index];
-    int wn = 0;
+	if(!glfwInit())
+	{
+		fprintf( stderr, "Failed to initialize GLFW\n" );
+		getchar();
+		return 0;
+	}
 
-    for (int i = 0; i < faces->nb_points[index]; i++)
-    {
-        t_cof A, B;
-        float z;
-        project_vertex(&vertex->co[faces->faces[index][i]], &A.x, &A.y, &z);
-        project_vertex(&vertex->co[faces->faces[index][(i + 1) % n]], &B.x, &B.y, &z);
-        if (A.y <= y)
-        {
-            if (B.y > y)
-            {
-                double x_inter = A.x + (y - A.y) * (B.x - A.x) / (B.y - A.y);
-                if (x_inter > x)
-                    wn += 1;
-            }
-        }
-        else
-        {
-            if (B.y <= y)
-            {
-                double x_inter = A.x + (y - A.y) * (B.x - A.x) / (B.y - A.y);
-                if (x_inter > x)
-                    wn -= 1;
-            }
-        }
-    }
-    return wn;
+	glfwWindowHint(GLFW_SAMPLES, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+	*window = glfwCreateWindow(WIDTH, HEIGHT, str, NULL, NULL);
+	if(*window == NULL)
+	{
+		fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
+		getchar();
+		glfwTerminate();
+		return 0;
+	}
+	glfwMakeContextCurrent(*window);
+	if (glewInit() != GLEW_OK)
+	{
+		fprintf(stderr, "Failed to initialize GLEW\n");
+		getchar();
+		glfwTerminate();
+		return 0;
+	}
+	return (1);
 }
 
-
-int is_in_face(t_data *data, int x, int y, int index)
+static void oneLine(char **dest, char *file)
 {
-    t_vertex *vertex = data->obj->vertex;
-    t_faces *faces = data->obj->faces;
-    int     inside = 0;
-    int     n = faces->nb_points[index];
+	int		fd;
+	char	*str;
+	int		old_size = 0;
+	int		len;
 
-    for (int i = 0, j = n - 1; i < n; j = i++)
-    {
-        float xi, yi, xj, yj;
-        float z;
-        project_vertex(&vertex->co[faces->faces[index][i]], &xi, &yi, &z);
-        project_vertex(&vertex->co[faces->faces[index][j]], &xj, &yj, &z);
-        if (((yi > y) != (yj > y)) &&
-            (x < (xj - xi) * (y - yi) / (yj - yi) + xi))
-            inside = !inside;
-    }
-    return inside;
+	fd = open(file, O_RDONLY);
+	if (fd == -1)
+		return ;
+	str = get_next_line(fd);
+	while (str)
+	{
+		len = ft_strlen(str);
+		*dest = ft_realloc(*dest, len + old_size + 1, old_size);
+		if (!(*dest))
+		{
+			free(str);
+			close(fd);
+			return ;
+		}
+		ft_memcpy(&(*dest)[old_size], str, len);
+		old_size += len;
+		(*dest)[old_size] = '\0';
+		free(str);
+		str = get_next_line(fd);
+	}
+	close(fd);
 }
 
-int is_in_sight(t_data *data, int index)
+int initiate_shaders(GLuint *shaderProgram, char **vertexSrc, char **fragmentSrc)
 {
-    t_vertex    *vertex = data->obj->vertex;
-    t_faces     *faces = data->obj->faces;
-    t_cof       norm;
-
-    norm = normale(&vertex->co[faces->faces[index][0]],
-        &vertex->co[faces->faces[index][1]],
-        &vertex->co[faces->faces[index][2]]);
-    t_cof view_dir = {vertex->co[faces->faces[index][0]].x,
-        vertex->co[faces->faces[index][0]].y,
-        vertex->co[faces->faces[index][0]].z + data->sett->camera};
-    if (norm.x * view_dir.x + norm.y * view_dir.y + norm.z * view_dir.z < 0.0f)
-        return 1;
-    return 0;
+	oneLine(vertexSrc, "shaders/vertexShader.glsl");
+	if (!(*vertexSrc))
+		return (0);
+	oneLine(fragmentSrc, "shaders/fragmentShader.glsl");
+	if (!(*fragmentSrc))
+	{
+		free(*vertexSrc);
+		return 0;
+	}
+	*shaderProgram = createShaderProgram(*vertexSrc, *fragmentSrc);
+	return 1;
 }
 
-void    do_calc(t_data *data, int x, int y, int i)
+void	create_and_bind_matrices(t_data *data, GLFWwindow *window, GLuint shaderProgram)
 {
-    if (winding_number(data, x, y, i))
-    {
-        float z = z_interpolate(data, x, y, i);
-        if (x >= 0 && y >= 0 && x < WIDTH && y < HEIGHT
-            && z < data->obj->z_buffer[y][x])
-        {
-            data->obj->z_buffer[y][x] = z;
-            if (i % 3 == 1)
-                my_mlx_pixel_put(data->mlx->img, x, y, 0xffffff);
-            else if (i % 3 == 2)
-                my_mlx_pixel_put(data->mlx->img, x, y, 0xc0c0c0);
-            else
-                my_mlx_pixel_put(data->mlx->img, x, y, 0x808080);
-        }
-    }
-}
-
-int display_loop(t_data *data)
-{
-    t_faces *faces = data->obj->faces;
-
-    clear_img(data->mlx->img);
-    reset_z_buffer(data->obj);
-    do_rotations(data);
-    for (int i = 0; i < faces->nb_faces; i++)
-    {
-        t_cof min = {(float)INT_MAX, (float)INT_MAX, 0};
-        t_cof max = {(float)INT_MIN, (float)INT_MIN, 0};
-        fill_min_max(&min, &max, data, i);
-        for (int x = (int)min.x; x <= (int)max.x; x++)
-        {
-            for (int y = (int)min.y; y <= (int)max.y; y++)
-            {
-                if (data->sett->bfc && is_in_sight(data, i))
-                    do_calc(data, x, y, i);
-                else if (!data->sett->bfc)
-                    do_calc(data, x, y, i);
-            }
-        }
-    }
-    mlx_put_image_to_window(data->mlx->mlx, data->mlx->win, data->mlx->img->img, 0, 0);
-    return 1;
-}
-
-t_data *static_data(t_data *data)
-{
-    static t_data *res = NULL;
-
-    if (data)
-        res = data;
-    return res;
+	t_vertex *v = data->obj->vertex;
+	float rotX[16];
+	float rotY[16];
+	float rotZ[16];
+	float translate[16];
+	float center[16];
+	float projection[16];
+	float camera[16];
+	center_obj(data->obj->vertex, center);
+	rotate_y(rotY, &data->obj->angleY, window);
+	rotate_x(rotX, &data->obj->angleX, window);
+	rotate_z(rotZ, &data->obj->angleZ, window);
+	translate_obj(data->obj, translate, window);
+	project_points(projection, window);
+	lookAt(camera, 0.0f, 0.0f, 15.0f,
+					-v->cx, -v->cy, -v->cz,
+					0.0f, 1.0f, 0.0f);
+	GLuint modelLoc = glGetUniformLocation(shaderProgram, "rotX");
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, rotX);
+	modelLoc = glGetUniformLocation(shaderProgram, "rotY");
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, rotY);
+	modelLoc = glGetUniformLocation(shaderProgram, "rotZ");
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, rotZ);
+	modelLoc = glGetUniformLocation(shaderProgram, "center");
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, center);
+	modelLoc = glGetUniformLocation(shaderProgram, "translate");
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, translate);
+	modelLoc = glGetUniformLocation(shaderProgram, "projection");
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, projection);
+	modelLoc = glGetUniformLocation(shaderProgram, "camera");
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, camera);
 }
 
 int main(int ac, char **av)
 {
-    t_data data;
+	t_data data;
+	GLFWwindow* window = NULL;
+	GLuint shaderProgram;
+	char *vertexSrc = NULL;
+	char *fragmentSrc = NULL;
 
-    if (ac != 2)
+	if (ac != 2)
         return 1;
-    data.mlx = &(t_mlx){0, 0, 0};
-    data.mlx->img = &(t_img){0, 0, 0, 0, 0, 1080, 1920};
-    data.obj = &(t_obj){0, 0, {{INFINITY}}};
-    data.obj->faces = &(t_faces){0, 0, 0};
-    data.sett = &(t_sett){1, 0, 0, 0, 0, 0, 0, 5.0f};
-    data.obj->vertex = &(t_vertex){0, 0};
-    if (!parsing(&data, av[1]))
-        return 2 ;
-    center_vertex(data.obj->vertex);
-    data.mlx->mlx = mlx_init();
-    data.mlx->win = mlx_new_window(data.mlx->mlx, 1920, 1080, "scop");
-    static_data(&data);
-    new_img(&data, data.mlx->img);
-    rotate_x(data.obj->vertex, PI);
-    mlx_put_image_to_window(data.mlx->mlx, data.mlx->win, data.mlx->img->img, 0, 0);
-    mlx_hook(data.mlx->win, 17, 0, quit_prog, &data);
-    mlx_hook(data.mlx->win, 2, (1L << 0), deal_key, &data);
-    mlx_key_hook(data.mlx->win, release_key, &data);
-    mlx_mouse_hook(data.mlx->win, mouse_hook, &data);
-    mlx_loop_hook(data.mlx->mlx, display_loop, &data);
-    mlx_loop(data.mlx->mlx);
+	data.obj = &(t_obj){0, 0, 0, 0, 0, 0, 0, 0};
+	data.obj->faces = &(t_faces){0, 0};
+    data.obj->vertex = &(t_vertex){0, 0, 0, 0, 0};
+	if (!parsing(&data, av[1]))
+		return 2;
+	if (!initiate_window(&window, av[1]))
+		return 3;
+	if (!initiate_shaders(&shaderProgram, &vertexSrc, &fragmentSrc))
+		return 4;
+
+	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
+	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
+
+	GLuint vao, vbo, ebo;
+
+	glGenVertexArrays(1, &vao);
+	glGenBuffers(1, &vbo);
+	glGenBuffers(1, &ebo);
+
+	glBindVertexArray(vao);
+
+	// buffer des sommets
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, data.obj->vertex->nb_vertex * 3 * sizeof(float), data.obj->vertex->co, GL_STATIC_DRAW);
+
+	// buffer des indices (faces)
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.obj->faces->nb_faces * sizeof(GLuint), data.obj->faces->faces, GL_STATIC_DRAW);
+
+	// layout: ici 3 floats par sommet
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glBindVertexArray(0);
+
+	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
+		   glfwWindowShouldClose(window) == 0 )
+	{
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glUseProgram(shaderProgram);
+		glEnable(GL_DEPTH_TEST);
+		create_and_bind_matrices(&data, window, shaderProgram);
+		glBindVertexArray(vao);
+		glDrawElements(GL_TRIANGLES, data.obj->faces->nb_faces, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	}
+	glfwDestroyWindow(window);
+	glfwTerminate();
+	return (0);
 }

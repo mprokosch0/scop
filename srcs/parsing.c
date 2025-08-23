@@ -1,6 +1,28 @@
 
 #include "scop.h"
 
+void check_nb_faces(t_faces *faces, char *str)
+{
+	unsigned int	i;
+	unsigned int	count;
+
+	i = 0;
+	count = 0;
+	while (str[i])
+	{
+		while (str[i] == ' ')
+			i++;
+		if (str[i] && str[i] != ' ')
+		{
+			count++;
+			while (str[i] != ' ' && str[i])
+				i++;
+		}
+	}
+	count = (count - 2) * 3;
+	faces->nb_faces += count;
+}
+
 int	get_info(t_data *data, char *fileName)
 {
 	int		fd;
@@ -17,7 +39,7 @@ int	get_info(t_data *data, char *fileName)
 		if (str && str[0] == 'v')
 			data->obj->vertex->nb_vertex++;
 		else if (str && str[0] == 'f')
-			data->obj->faces->nb_faces++;
+			check_nb_faces(data->obj->faces, &str[1]);
 	}
 	close(fd);
 	return 1;
@@ -34,31 +56,22 @@ void	free_str_tab(char **str)
 			free(str);
 }
 
-int	fill_face(t_faces *faces, char *s, int index)
+int	fill_face(t_faces *faces, char *str, int *index)
 {
-	int	i = 0;
+	int		i = 0;
 	char	**res;
+	int		count = 0;
 
-	while (s[i])
-	{
-		while (s[i] == ' ')
-			i++;
-		if (s[i] != ' ' && s[i])
-		{
-			faces->nb_points[index]++;
-			while (s[i] != ' ' && s[i])
-				i++;
-		}
-	}
-	faces->faces[index] = calloc(faces->nb_points[index], sizeof(int));
-	if (!faces->faces[index])
-		return (0);
+	res = ft_split(str, ' ');
+	while (res[i++])
+		count++;
 	i = 0;
-	res = ft_split(s, ' ');
-	while (i < faces->nb_points[index])
+	GLuint nb1 = ft_atoi(res[i++]) - 1;
+	for (int i = 1; i < count - 1; i++)
 	{
-		faces->faces[index][i] = ft_atoi(res[i]) - 1;
-		i++;
+		faces->faces[(*index)++] = nb1;
+		faces->faces[(*index)++] = ft_atoi(res[i]) - 1;
+		faces->faces[(*index)++] = ft_atoi(res[i + 1]) - 1;
 	}
 	free_str_tab(res);
 	return 1;
@@ -84,15 +97,20 @@ int	fill_info(t_data *data, char *fileName)
 		if (str && str[0] == 'v')
 		{
 			res = ft_split(&str[1], ' ');
-			data->obj->vertex->co[v].x = atof(res[0]);
-			data->obj->vertex->co[v].y = atof(res[1]);
-			data->obj->vertex->co[v].z = atof(res[2]);
-			v++;
+			data->obj->vertex->co[v++] = atof(res[0]);
+			data->obj->vertex->cx += data->obj->vertex->co[v - 1];
+			data->obj->vertex->co[v++] = atof(res[1]);
+			data->obj->vertex->cy += data->obj->vertex->co[v - 1];
+			data->obj->vertex->co[v++] = atof(res[2]);
+			data->obj->vertex->cz += data->obj->vertex->co[v - 1];
 			free_str_tab(res);
 		}
 		else if (str && str[0] == 'f')
-			fill_face(data->obj->faces, &str[1], f++);
+			fill_face(data->obj->faces, &str[1], &f);
 	}
+	data->obj->vertex->cx /= data->obj->vertex->nb_vertex;
+	data->obj->vertex->cy /= data->obj->vertex->nb_vertex;
+	data->obj->vertex->cz /= data->obj->vertex->nb_vertex;
 	close(fd);
 	return 1;
 }
@@ -101,13 +119,10 @@ int	parsing(t_data *data, char *fileName)
 {
 	if (!get_info(data, fileName))
 		return 0;
-	data->obj->faces->faces = calloc(data->obj->faces->nb_faces, sizeof(int *));
+	data->obj->faces->faces = calloc(data->obj->faces->nb_faces, sizeof(GLuint));
 	if (!data->obj->faces->faces)
 		return 0;
-	data->obj->faces->nb_points = calloc(data->obj->faces->nb_faces, sizeof(int));
-	if (!data->obj->faces->nb_points)
-		return 0;
-	data->obj->vertex->co = calloc(data->obj->vertex->nb_vertex, sizeof(t_cof));
+	data->obj->vertex->co = calloc(data->obj->vertex->nb_vertex * 3, sizeof(float));
 	if (!data->obj->vertex->co)
 		return 0;
 	if (!fill_info(data, fileName))

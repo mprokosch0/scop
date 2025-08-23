@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ft_realloc.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mprokosc <mprokosc@student.42.fr>          +#+  +:+       +#+        */
+/*   By: maxime <maxime@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/26 15:51:59 by mprokosc          #+#    #+#             */
-/*   Updated: 2025/03/26 16:23:32 by mprokosc         ###   ########.fr       */
+/*   Updated: 2025/08/23 15:01:30 by maxime           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,5 +36,7 @@ void	*ft_realloc(void *ptr, size_t size, size_t old_size)
 		ft_memcpy(new, ptr, size);
 	}
 	free(ptr);
+	if (!new)
+		return (NULL);
 	return (new);
 }
