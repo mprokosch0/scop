@@ -97,6 +97,8 @@ int	fill_info(t_data *data, char *fileName)
 		if (str && str[0] == 'v')
 		{
 			res = ft_split(&str[1], ' ');
+			if (!res)
+				return (free(str), close(fd), get_next_line(-1), 0);
 			data->obj->vertex->co[v++] = atof(res[0]);
 			data->obj->vertex->cx += data->obj->vertex->co[v - 1];
 			data->obj->vertex->co[v++] = atof(res[1]);
@@ -108,6 +110,7 @@ int	fill_info(t_data *data, char *fileName)
 		else if (str && str[0] == 'f')
 			fill_face(data->obj->faces, &str[1], &f);
 	}
+	get_next_line(-1);
 	data->obj->vertex->cx /= data->obj->vertex->nb_vertex;
 	data->obj->vertex->cy /= data->obj->vertex->nb_vertex;
 	data->obj->vertex->cz /= data->obj->vertex->nb_vertex;
@@ -124,8 +127,15 @@ int	parsing(t_data *data, char *fileName)
 		return 0;
 	data->obj->vertex->co = calloc(data->obj->vertex->nb_vertex * 3, sizeof(float));
 	if (!data->obj->vertex->co)
+	{
+		free(data->obj->faces->faces);
 		return 0;
+	}
 	if (!fill_info(data, fileName))
+	{
+		free(data->obj->faces->faces);
+		free(data->obj->vertex->co);
 		return 0;
+	}
 	return 1;
 }

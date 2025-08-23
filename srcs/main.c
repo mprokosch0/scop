@@ -59,7 +59,7 @@ int	initiate_window(GLFWwindow **window, char *str)
 	*window = glfwCreateWindow(WIDTH, HEIGHT, str, NULL, NULL);
 	if(*window == NULL)
 	{
-		fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
+		fprintf( stderr, "Failed to open GLFW window.\n" );
 		getchar();
 		glfwTerminate();
 		return 0;
@@ -105,18 +105,22 @@ static void oneLine(char **dest, char *file)
 	close(fd);
 }
 
-int initiate_shaders(GLuint *shaderProgram, char **vertexSrc, char **fragmentSrc)
+int initiate_shaders(GLuint *shaderProgram)
 {
-	oneLine(vertexSrc, "shaders/vertexShader.glsl");
-	if (!(*vertexSrc))
+	char *vertexSrc = NULL;
+	char *fragmentSrc = NULL;
+	oneLine(&vertexSrc, "shaders/vertexShader.glsl");
+	if (!(vertexSrc))
 		return (0);
-	oneLine(fragmentSrc, "shaders/fragmentShader.glsl");
-	if (!(*fragmentSrc))
+	oneLine(&fragmentSrc, "shaders/fragmentShader.glsl");
+	if (!(fragmentSrc))
 	{
-		free(*vertexSrc);
+		free(vertexSrc);
 		return 0;
 	}
-	*shaderProgram = createShaderProgram(*vertexSrc, *fragmentSrc);
+	*shaderProgram = createShaderProgram(vertexSrc, fragmentSrc);
+	free(vertexSrc);
+	free(fragmentSrc);
 	return 1;
 }
 
@@ -155,57 +159,77 @@ void	create_and_bind_matrices(t_data *data, GLFWwindow *window, GLuint shaderPro
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, camera);
 }
 
-int main(int ac, char **av)
+void	init_buffers(t_data *data, GLuint *vao, GLuint *vbo, GLuint *ebo)
 {
-	t_data data;
-	GLFWwindow* window = NULL;
-	GLuint shaderProgram;
-	char *vertexSrc = NULL;
-	char *fragmentSrc = NULL;
+	glGenVertexArrays(1, vao);
+	glGenBuffers(1, vbo);
+	glGenBuffers(1, ebo);
 
-	if (ac != 2)
-        return 1;
-	data.obj = &(t_obj){0, 0, 0, 0, 0, 0, 0, 0};
-	data.obj->faces = &(t_faces){0, 0};
-    data.obj->vertex = &(t_vertex){0, 0, 0, 0, 0};
-	if (!parsing(&data, av[1]))
-		return 2;
-	if (!initiate_window(&window, av[1]))
-		return 3;
-	if (!initiate_shaders(&shaderProgram, &vertexSrc, &fragmentSrc))
-		return 4;
-
-	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-
-	GLuint vao, vbo, ebo;
-
-	glGenVertexArrays(1, &vao);
-	glGenBuffers(1, &vbo);
-	glGenBuffers(1, &ebo);
-
-	glBindVertexArray(vao);
+	glBindVertexArray(*vao);
 
 	// buffer des sommets
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, data.obj->vertex->nb_vertex * 3 * sizeof(float), data.obj->vertex->co, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, *vbo);
+	glBufferData(GL_ARRAY_BUFFER, data->obj->vertex->nb_vertex * 3 * sizeof(float), data->obj->vertex->co, GL_STATIC_DRAW);
 
 	// buffer des indices (faces)
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.obj->faces->nb_faces * sizeof(GLuint), data.obj->faces->faces, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, data->obj->faces->nb_faces * sizeof(GLuint), data->obj->faces->faces, GL_STATIC_DRAW);
 
 	// layout: ici 3 floats par sommet
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
 	glBindVertexArray(0);
+}
+
+int	parse_and_init(t_data *data, int ac, char **av, GLFWwindow **window, GLuint *shaderProgram)
+{
+	if (ac != 2)
+        return 1;
+	if (!parsing(data, av[1]))
+		return 2;
+	if (!initiate_window(window, av[1]))
+	{
+		free(data->obj->faces->faces);
+		free(data->obj->vertex->co);
+		return 3;
+	}
+	if (!initiate_shaders(shaderProgram))
+	{
+		free(data->obj->faces->faces);
+		free(data->obj->vertex->co);
+		glfwDestroyWindow(*window);
+		glfwTerminate();
+		return 4;
+	}
+	return 0;
+}
+
+int main(int ac, char **av)
+{
+	t_data data;
+	GLFWwindow* window = NULL;
+	GLuint shaderProgram = 0;
+	GLuint vao, vbo, ebo;
+
+	data.obj = &(t_obj){0, 0, 0, 0, 0, 0, 0, 0};
+	data.obj->faces = &(t_faces){0, 0};
+    data.obj->vertex = &(t_vertex){0, 0, 0, 0, 0};
+	int a = parse_and_init(&data, ac, av, &window, &shaderProgram);
+	if (a)
+		return (a);
+	
+	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
+	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
+	glEnable(GL_DEPTH_TEST);
+
+	init_buffers(&data, &vao, &vbo, &ebo);
 
 	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
 		   glfwWindowShouldClose(window) == 0 )
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(shaderProgram);
-		glEnable(GL_DEPTH_TEST);
 		create_and_bind_matrices(&data, window, shaderProgram);
 		glBindVertexArray(vao);
 		glDrawElements(GL_TRIANGLES, data.obj->faces->nb_faces, GL_UNSIGNED_INT, 0);
@@ -213,6 +237,12 @@ int main(int ac, char **av)
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
+	free(data.obj->vertex->co);
+	free(data.obj->faces->faces);
+	glDeleteBuffers(1, &vbo);
+	glDeleteBuffers(1, &ebo);
+	glDeleteVertexArrays(1, &vao);
+	glDeleteProgram(shaderProgram);
 	glfwDestroyWindow(window);
 	glfwTerminate();
 	return (0);
