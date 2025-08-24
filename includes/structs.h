@@ -40,6 +40,7 @@ typedef struct obj
     float       tx;
     float       ty;
     float       tz;
+    int         which_uv;
 }   t_obj;
 
 typedef struct data

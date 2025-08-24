@@ -157,12 +157,90 @@ void	create_and_bind_matrices(t_data *data, GLFWwindow *window, GLuint shaderPro
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, projection);
 	modelLoc = glGetUniformLocation(shaderProgram, "camera");
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, camera);
+	modelLoc = glGetUniformLocation(shaderProgram, "which_uv");
+	glUniform1i(modelLoc, data->obj->which_uv);
 }
 
-void	init_buffers(t_data *data, GLuint *vao, GLuint *vbo, GLuint *ebo)
+
+
+float	*generateUVp(float *vertices, int nb_vertices)
 {
+    float *uvs = ft_calloc(sizeof(float), nb_vertices * 2);
+    if (!uvs)
+		return NULL;
+    float minY = vertices[1], maxY = vertices[1];
+	float minZ = vertices[2], maxZ = vertices[2];
+
+    for (int i = 3; i < nb_vertices * 3; i += 3)
+	{
+        if (vertices[i + 1] < minY)
+			minY = vertices[i];
+        if (vertices[i + 1] > maxY)
+			maxY = vertices[i];
+		if (vertices[i + 2] < minZ)
+			minZ = vertices[i];
+        if (vertices[i + 2] > maxZ)
+			maxZ = vertices[i];
+    }
+
+	for (int v = 0; v < nb_vertices; v++)
+	{
+		float y = vertices[v * 3 + 1];
+		float z = vertices[v * 3 + 2];
+		float rangeY = maxY - minY;
+		float rangeZ = maxZ - minZ;
+		float maxRange = fmax(rangeY, rangeZ);
+		float u = ((y - minY) / maxRange) * 0.5;
+		float vcoord = ((z - minZ) / maxRange) * 0.5;
+
+		uvs[v * 2 + 1] = u;
+		uvs[v * 2 + 0] = vcoord;
+    }
+
+    return uvs;
+}
+
+float	*generateUVs(float *vertices, int nb_vertices)
+{
+    float *uvs = ft_calloc(sizeof(float), nb_vertices * 2);
+    if (!uvs)
+		return NULL;
+
+	float minY = vertices[1], maxY = vertices[1];
+
+    for (int i = 3; i < nb_vertices * 3; i += 3)
+	{
+        if (vertices[i + 1] < minY)
+			minY = vertices[i];
+        if (vertices[i + 1] > maxY)
+			maxY = vertices[i];
+    }
+
+	for (int v = 0; v < nb_vertices; v++)
+	{
+		float x = vertices[v * 3];
+		float y = vertices[v * 3 + 1];
+		float z = vertices[v * 3 + 2];
+		float ny = 2.0 * (y - minY) / (maxY - minY) - 1.0;
+		uvs[v * 2 + 0] = (0.5 + atan2(z, x) / (2 * PI));
+		uvs[v * 2 + 1] = (0.5 + asin(ny) / PI);
+    }
+
+    return uvs;
+}
+
+void	init_buffers(t_data *data, GLuint *vao, GLuint *vbo, GLuint *vboUVp, GLuint *vboUVs, GLuint *ebo)
+{
+	float *uvp = generateUVp(data->obj->vertex->co, data->obj->vertex->nb_vertex);
+	if (!uvp)
+		return ; // à protéger
+	float *uvs = generateUVs(data->obj->vertex->co, data->obj->vertex->nb_vertex);
+	if (!uvs)
+		return ; // à protéger
 	glGenVertexArrays(1, vao);
 	glGenBuffers(1, vbo);
+	glGenBuffers(1, vboUVp);
+	glGenBuffers(1, vboUVs);
 	glGenBuffers(1, ebo);
 
 	glBindVertexArray(*vao);
@@ -170,16 +248,24 @@ void	init_buffers(t_data *data, GLuint *vao, GLuint *vbo, GLuint *ebo)
 	// buffer des sommets
 	glBindBuffer(GL_ARRAY_BUFFER, *vbo);
 	glBufferData(GL_ARRAY_BUFFER, data->obj->vertex->nb_vertex * 3 * sizeof(float), data->obj->vertex->co, GL_STATIC_DRAW);
-
-	// buffer des indices (faces)
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, data->obj->faces->nb_faces * sizeof(GLuint), data->obj->faces->faces, GL_STATIC_DRAW);
-
-	// layout: ici 3 floats par sommet
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
+	glBindBuffer(GL_ARRAY_BUFFER, *vboUVp);
+	glBufferData(GL_ARRAY_BUFFER, data->obj->vertex->nb_vertex * 2 * sizeof(float), uvp, GL_STATIC_DRAW);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(1);
+
+	glBindBuffer(GL_ARRAY_BUFFER, *vboUVs);
+	glBufferData(GL_ARRAY_BUFFER, data->obj->vertex->nb_vertex * 2 * sizeof(float), uvs, GL_STATIC_DRAW);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(2);
+	//buffer des indices (faces)
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, data->obj->faces->nb_faces * sizeof(GLuint), data->obj->faces->faces, GL_STATIC_DRAW);
+
 	glBindVertexArray(0);
+	free(uvs);
 }
 
 int	parse_and_init(t_data *data, int ac, char **av, GLFWwindow **window, GLuint *shaderProgram)
@@ -205,32 +291,102 @@ int	parse_and_init(t_data *data, int ac, char **av, GLFWwindow **window, GLuint 
 	return 0;
 }
 
+void	fill_text(unsigned char **text, unsigned int *width, unsigned int *height)
+{
+	unsigned int imageSize; 
+
+	int fd = open("cats.bmp", O_RDONLY);
+    if (fd == -1)
+        return;
+
+    unsigned char header[54];
+    if (read(fd, header, 54) != 54)
+    {
+        close(fd);
+        return;
+    }
+
+    *width  = *(int*)&header[0x12];
+    *height = *(int*)&header[0x16];
+
+    unsigned int offset = *(int*)&header[0x0A];
+    imageSize = *width * *height * 3;
+
+    *text = ft_calloc(imageSize, 1);
+    if (!*text)
+    {
+        close(fd);
+        return;
+    }
+
+    lseek(fd, offset, SEEK_SET);
+
+    if (read(fd, *text, imageSize) != (ssize_t)imageSize)
+    {
+        free(*text);
+        *text = NULL;
+    }
+
+    close(fd);
+}
+
+GLuint load_text()
+{
+	unsigned char	*texture = NULL;
+	unsigned int	width, height;
+	GLuint			textureID;
+
+	fill_text(&texture, &width, &height);
+	if (!texture)
+		return 0;
+	glGenTextures(1, &textureID); 
+	glBindTexture(GL_TEXTURE_2D, textureID);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, texture);
+	glGenerateMipmap(GL_TEXTURE_2D); 
+	free(texture);
+	return textureID;
+}
+
+
 int main(int ac, char **av)
 {
 	t_data data;
 	GLFWwindow* window = NULL;
 	GLuint shaderProgram = 0;
-	GLuint vao, vbo, ebo;
+	GLuint vao, vbo, vboUVp, vboUVs, ebo;
+	GLuint textureID;
 
-	data.obj = &(t_obj){0, 0, 0, 0, 0, 0, 0, 0};
+	data.obj = &(t_obj){0, 0, 0, 0, 0, 0, 0, 0, 0};
 	data.obj->faces = &(t_faces){0, 0};
     data.obj->vertex = &(t_vertex){0, 0, 0, 0, 0};
 	int a = parse_and_init(&data, ac, av, &window, &shaderProgram);
 	if (a)
 		return (a);
-	
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
 	glEnable(GL_DEPTH_TEST);
-
-	init_buffers(&data, &vao, &vbo, &ebo);
-
+	textureID= load_text();
+	init_buffers(&data, &vao, &vbo, &vboUVp, &vboUVs, &ebo);
 	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
 		   glfwWindowShouldClose(window) == 0 )
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(shaderProgram);
+		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
+		{
+			if (data.obj->which_uv)
+				data.obj->which_uv = 0;
+			else
+				data.obj->which_uv = 1;
+		}
 		create_and_bind_matrices(&data, window, shaderProgram);
+		glActiveTexture(GL_TEXTURE0);
+    	glBindTexture(GL_TEXTURE_2D, textureID);
+    	glUniform1i(glGetUniformLocation(shaderProgram, "ourTexture"), 0);
 		glBindVertexArray(vao);
 		glDrawElements(GL_TRIANGLES, data.obj->faces->nb_faces, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);

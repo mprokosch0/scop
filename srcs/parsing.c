@@ -56,13 +56,11 @@ void	free_str_tab(char **str)
 			free(str);
 }
 
-int	fill_face(t_faces *faces, char *str, int *index)
+int	fill_face(t_faces *faces, char **res, int *index)
 {
 	int		i = 0;
-	char	**res;
 	int		count = 0;
 
-	res = ft_split(str, ' ');
 	while (res[i++])
 		count++;
 	i = 0;
@@ -73,7 +71,6 @@ int	fill_face(t_faces *faces, char *str, int *index)
 		faces->faces[(*index)++] = ft_atoi(res[i]) - 1;
 		faces->faces[(*index)++] = ft_atoi(res[i + 1]) - 1;
 	}
-	free_str_tab(res);
 	return 1;
 }
 
@@ -94,21 +91,23 @@ int	fill_info(t_data *data, char *fileName)
 	{
 		free(str);
 		str = get_next_line(fd);
-		if (str && str[0] == 'v')
+		if (!str)
+			break ;
+		res = ft_split(&str[1], ' ');
+		if (!res)
+			return (free(str), close(fd), get_next_line(-1), 0);
+		if (str[0] == 'v')
 		{
-			res = ft_split(&str[1], ' ');
-			if (!res)
-				return (free(str), close(fd), get_next_line(-1), 0);
 			data->obj->vertex->co[v++] = atof(res[0]);
 			data->obj->vertex->cx += data->obj->vertex->co[v - 1];
 			data->obj->vertex->co[v++] = atof(res[1]);
 			data->obj->vertex->cy += data->obj->vertex->co[v - 1];
 			data->obj->vertex->co[v++] = atof(res[2]);
 			data->obj->vertex->cz += data->obj->vertex->co[v - 1];
-			free_str_tab(res);
 		}
-		else if (str && str[0] == 'f')
-			fill_face(data->obj->faces, &str[1], &f);
+		else if (str[0] == 'f')
+			fill_face(data->obj->faces, res, &f);
+		free_str_tab(res);
 	}
 	get_next_line(-1);
 	data->obj->vertex->cx /= data->obj->vertex->nb_vertex;
