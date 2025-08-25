@@ -233,11 +233,12 @@ float	*generateUVs(float *vertices, int nb_vertices)
 
 void	init_buffers(t_data *data, GLuint *vao, GLuint *vbo, GLuint *vboUVp, GLuint *vboUVs, GLuint *ebo)
 {
-	float *uvp = generateUVp(data->obj->vertex->co, data->obj->vertex->nb_vertex);
-	if (!uvp)
+	if (!data->obj->vertex->uvp)
+		data->obj->vertex->uvp = generateUVp(data->obj->vertex->co, data->obj->vertex->nb_vertex);
+	if (!data->obj->vertex->uvp)
 		return ; // à protéger
-	float *uvs = generateUVs(data->obj->vertex->co, data->obj->vertex->nb_vertex);
-	if (!uvs)
+	data->obj->vertex->uvs = generateUVs(data->obj->vertex->co, data->obj->vertex->nb_vertex);
+	if (!data->obj->vertex->uvs)
 		return ; // à protéger
 	glGenVertexArrays(1, vao);
 	glGenBuffers(1, vbo);
@@ -254,12 +255,12 @@ void	init_buffers(t_data *data, GLuint *vao, GLuint *vbo, GLuint *vboUVp, GLuint
 	glEnableVertexAttribArray(0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, *vboUVp);
-	glBufferData(GL_ARRAY_BUFFER, data->obj->vertex->nb_vertex * 2 * sizeof(float), uvp, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, data->obj->vertex->nb_vertex * 2 * sizeof(float), data->obj->vertex->uvp, GL_STATIC_DRAW);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(1);
 
 	glBindBuffer(GL_ARRAY_BUFFER, *vboUVs);
-	glBufferData(GL_ARRAY_BUFFER, data->obj->vertex->nb_vertex * 2 * sizeof(float), uvs, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, data->obj->vertex->nb_vertex * 2 * sizeof(float), data->obj->vertex->uvs, GL_STATIC_DRAW);
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(2);
 	//buffer des indices (faces)
@@ -267,7 +268,28 @@ void	init_buffers(t_data *data, GLuint *vao, GLuint *vbo, GLuint *vboUVp, GLuint
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, data->obj->faces->nb_faces * sizeof(GLuint), data->obj->faces->faces, GL_STATIC_DRAW);
 
 	glBindVertexArray(0);
-	free(uvs);
+	free(data->obj->vertex->uvp);
+	free(data->obj->vertex->uvs);
+}
+
+void	free_data(t_data *data)
+{
+	t_vertex *v = data->obj->vertex;
+	t_faces *f = data->obj->faces;
+	if (v->co)
+		free(v->co);
+	if (v->n)
+		free(v->n);
+	if (v->uvp)
+		free(v->uvp);
+	if (v->uvs)
+		free(v->uvs);
+	if (f->faces)
+		free(f->faces);
+	if (f->n)
+		free(f->n);
+	if (f->uvp)
+		free(f->uvp);
 }
 
 int	parse_and_init(t_data *data, int ac, char **av, GLFWwindow **window, GLuint *shaderProgram)
@@ -275,17 +297,18 @@ int	parse_and_init(t_data *data, int ac, char **av, GLFWwindow **window, GLuint 
 	if (ac != 2)
         return 1;
 	if (!parsing(data, av[1]))
+	{
+		free_data(data);
 		return 2;
+	}
 	if (!initiate_window(window, av[1]))
 	{
-		free(data->obj->faces->faces);
-		free(data->obj->vertex->co);
+		free_data(data);
 		return 3;
 	}
 	if (!initiate_shaders(shaderProgram))
 	{
-		free(data->obj->faces->faces);
-		free(data->obj->vertex->co);
+		free_data(data);
 		glfwDestroyWindow(*window);
 		glfwTerminate();
 		return 4;
@@ -404,8 +427,8 @@ int main(int ac, char **av)
 	GLuint textureID;
 
 	data.obj = &(t_obj){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-	data.obj->faces = &(t_faces){0, 0};
-    data.obj->vertex = &(t_vertex){0, 0, 0, 0, 0};
+	data.obj->faces = &(t_faces){0, 0, 0, 0};
+    data.obj->vertex = &(t_vertex){0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	int a = parse_and_init(&data, ac, av, &window, &shaderProgram);
 	if (a)
 		return (a);

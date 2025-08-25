@@ -18,16 +18,23 @@ typedef struct co
 typedef struct faces
 {
     GLuint *faces;
+    GLuint *uvp;
+    GLuint *n;
     int nb_faces;
 }   t_faces;
 
 typedef struct vertex
 {
     float   *co;
+    float   *uvp;
+    float   *uvs;
+    float   *n;
     float   cx;
     float   cy;
     float   cz;
     int     nb_vertex;
+    int     nb_uvp;
+    int     nb_n;
 }   t_vertex;
 
 typedef struct obj
@@ -48,6 +55,7 @@ typedef struct obj
 typedef struct data
 {
     t_obj   *obj;
+    int     nb_obj;
 }   t_data;
 
 #endif
