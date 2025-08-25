@@ -159,6 +159,8 @@ void	create_and_bind_matrices(t_data *data, GLFWwindow *window, GLuint shaderPro
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, camera);
 	modelLoc = glGetUniformLocation(shaderProgram, "which_uv");
 	glUniform1i(modelLoc, data->obj->which_uv);
+	modelLoc = glGetUniformLocation(shaderProgram, "tex");
+	glUniform1i(modelLoc, data->obj->tex);
 }
 
 
@@ -351,6 +353,47 @@ GLuint load_text()
 	return textureID;
 }
 
+void	manage_keys(t_data *data, GLFWwindow *window)
+{
+	static int pressed = 0, pressed2 = 0, uv = 0, tex = 0;
+	static int pressed3 = 0, tri = 0;
+	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
+			pressed = 1;
+	else
+		pressed = uv = 0;
+	if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS)
+			pressed2 = 1;
+	else
+		pressed2 = tex = 0;
+	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+			pressed3 = 1;
+	else
+		pressed3 = tri = 0;
+	if (pressed && !uv)
+	{
+		if (data->obj->which_uv)
+			data->obj->which_uv = 0;
+		else
+			data->obj->which_uv = 1;
+		uv = 1;
+	}
+	if (pressed2 && !tex)
+	{
+		if (data->obj->tex)
+			data->obj->tex = 0;
+		else
+			data->obj->tex = 1;
+		tex = 1;
+	}
+	if (pressed3 && !tri)
+	{
+		if (data->obj->tri)
+			data->obj->tri = 0;
+		else
+			data->obj->tri = 1;
+		tri = 1;
+	}
+}
 
 int main(int ac, char **av)
 {
@@ -360,7 +403,7 @@ int main(int ac, char **av)
 	GLuint vao, vbo, vboUVp, vboUVs, ebo;
 	GLuint textureID;
 
-	data.obj = &(t_obj){0, 0, 0, 0, 0, 0, 0, 0, 0};
+	data.obj = &(t_obj){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 	data.obj->faces = &(t_faces){0, 0};
     data.obj->vertex = &(t_vertex){0, 0, 0, 0, 0};
 	int a = parse_and_init(&data, ac, av, &window, &shaderProgram);
@@ -376,19 +419,16 @@ int main(int ac, char **av)
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(shaderProgram);
-		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
-		{
-			if (data.obj->which_uv)
-				data.obj->which_uv = 0;
-			else
-				data.obj->which_uv = 1;
-		}
+		manage_keys(&data, window);
 		create_and_bind_matrices(&data, window, shaderProgram);
 		glActiveTexture(GL_TEXTURE0);
     	glBindTexture(GL_TEXTURE_2D, textureID);
     	glUniform1i(glGetUniformLocation(shaderProgram, "ourTexture"), 0);
 		glBindVertexArray(vao);
-		glDrawElements(GL_TRIANGLES, data.obj->faces->nb_faces, GL_UNSIGNED_INT, 0);
+		if (!data.obj->tri)
+			glDrawElements(GL_TRIANGLES, data.obj->faces->nb_faces, GL_UNSIGNED_INT, 0);
+		else
+			glDrawArrays(GL_POINTS, 0, data.obj->faces->nb_faces);
 		glBindVertexArray(0);
 		glfwSwapBuffers(window);
 		glfwPollEvents();

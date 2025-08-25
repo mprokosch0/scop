@@ -12,7 +12,7 @@ uniform mat4 camera;
 uniform mat4 translate;
 uniform int which_uv;
 
-//flat out int faceID;
+flat out int faceID;
 out vec2 TexCoords;
 
 void main()
@@ -25,5 +25,5 @@ void main()
 		TexCoords = aTexCoord;
 	else
 		TexCoords = aTexSCoord;
-	//faceID = gl_VertexID / 3;
+	faceID = gl_VertexID / 3;
 }

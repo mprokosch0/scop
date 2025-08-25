@@ -41,6 +41,8 @@ typedef struct obj
     float       ty;
     float       tz;
     int         which_uv;
+    int         tri;
+    int         tex;
 }   t_obj;
 
 typedef struct data
