@@ -27,7 +27,7 @@ $(OBJ_DIR)/%.o: %.c
 
 $(NAME): $(OBJS) $(LIBFT)
 	@$(CC) $(CFLAGS) -o $(NAME) $(OBJS) $(LIBFT) $(LDFLAGS)
-	@export LD_LIBRARY_PATH=glew-2.2.0/lib:$LD_LIBRARY_PATH
+	export LD_LIBRARY_PATH=glew-2.2.0/lib:$LD_LIBRARY_PATH
 
 $(LIBFT):
 	@echo "$(GREEN)Compiling the Libft ..."

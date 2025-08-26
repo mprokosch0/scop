@@ -40,7 +40,7 @@ int	get_info(t_data *data, char *fileName)
 			data->obj->vertex->nb_vertex++;
 		else if (str && !strncmp(str, "vn", 2))
 			data->obj->vertex->nb_n++;
-		else if (str && !strncmp(str, "vf", 2))
+		else if (str && !strncmp(str, "vt", 2))
 			data->obj->vertex->nb_uvp++;
 		else if (str && !strncmp(str, "f ", 2))
 			check_nb_faces(data->obj->faces, &str[1]);
@@ -66,7 +66,7 @@ void	divide_f(char *str, GLuint *nb, GLuint *vt, GLuint *vn)
 	*nb = ft_atoi(str) - 1;
 	while (str[i] && str[i] != '/')
 		i++;
-	if (!str[++i])
+	if (!str[i++] || !str[i])
 		return ;
 	if (str[i] == '/' && str[++i])
 	{
