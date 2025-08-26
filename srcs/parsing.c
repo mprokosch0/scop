@@ -76,7 +76,7 @@ void	divide_f(char *str, GLuint *nb, GLuint *vt, GLuint *vn)
 	*vt = ft_atoi(&str[i]) - 1;
 	while (str[i] && str[i] != '/')
 		i++;
-	if (!str[++i])
+	if (!str[i++] || !str[i])
 		return ;
 	*vn = ft_atoi(&str[i]) - 1;
 }
@@ -145,7 +145,7 @@ int	fill_info(t_data *data, char *fileName)
 			break ;
 		if (str[0] == 'f' || str[0] == 'v')
 		{
-			res = ft_split(&str[1], ' ');
+			res = ft_split(&str[2], ' ');
 			if (!res)
 				return (free(str), close(fd), get_next_line(-1), 0);
 			if (!ft_strncmp(str, "v ", 2))

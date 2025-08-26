@@ -223,7 +223,7 @@ float	*generateUVs(float *vertices, int nb_vertices)
 		float x = vertices[v * 3];
 		float y = vertices[v * 3 + 1];
 		float z = vertices[v * 3 + 2];
-		float ny = 2.0 * (y - minY) / (maxY - minY) - 1.0;
+		float ny = 2.0 * (y - minY) / (maxY - minY) - 1.5;
 		uvs[v * 2 + 0] = (0.5 + atan2(z, x) / (2 * PI));
 		uvs[v * 2 + 1] = (0.5 + asin(ny) / PI);
     }
