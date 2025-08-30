@@ -1,5 +1,5 @@
 
-#include "scop.h"
+#include "../includes/scop.h"
 
 GLuint compileShader(const char* source, GLenum type)
 {
@@ -52,8 +52,8 @@ int	initiate_window(GLFWwindow **window, char *str)
 	}
 
 	glfwWindowHint(GLFW_SAMPLES, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	*window = glfwCreateWindow(WIDTH, HEIGHT, str, NULL, NULL);
@@ -65,9 +65,9 @@ int	initiate_window(GLFWwindow **window, char *str)
 		return 0;
 	}
 	glfwMakeContextCurrent(*window);
-	if (glewInit() != GLEW_OK)
+	if (!loadGLFunctions())
 	{
-		fprintf(stderr, "Failed to initialize GLEW\n");
+		fprintf( stderr, "Failed to open GLFW window.\n" );
 		getchar();
 		glfwTerminate();
 		return 0;
@@ -313,6 +313,7 @@ int	parse_and_init(t_data *data, int ac, char **av, GLFWwindow **window, GLuint 
 		glfwTerminate();
 		return 4;
 	}
+	
 	return 0;
 }
 

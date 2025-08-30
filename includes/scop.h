@@ -1,17 +1,17 @@
 #ifndef SCOP_H
 # define SCOP_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <math.h>
-#include <string.h>
-#include <unistd.h>
-#include "libft.h"
-#include <limits.h>
-#include "../glew-2.2.0/include/GL/glew.h"
-#include <GLFW/glfw3.h>
-#include "structs.h"
+# include <stdio.h>
+# include <stdlib.h>
+# include <fcntl.h>
+# include <math.h>
+# include <string.h>
+# include <unistd.h>
+# include "libft.h"
+# include <limits.h>
+# include <GLFW/glfw3.h>
+# include "structs.h"
+# include "load.h"
 
 int		parsing(t_data *data, char *fileName);
 

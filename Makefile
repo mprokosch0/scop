@@ -2,11 +2,11 @@ NAME = scop
 
 CC = cc
 
-CFLAGS = -Wall -Wextra -Werror -Iincludes -Iglew-2.2.0/include -O3 -I$(LIBFT_PATH) -g
+CFLAGS = -Wall -Wextra -Werror -Iincludes -O3 -I$(LIBFT_PATH) -g
 
-LDFLAGS = -Lglew-2.2.0/lib -lglfw -lGLEW -lGL -lm
+LDFLAGS = -lglfw  -lGL -lm
 
-SRCS = 	srcs/main.c srcs/parsing.c srcs/rotate.c\
+SRCS = 	srcs/main.c srcs/parsing.c srcs/rotate.c srcs/load.c\
 
 OBJ_DIR = obj
 OBJS = $(SRCS:%.c=$(OBJ_DIR)/%.o)
@@ -27,7 +27,6 @@ $(OBJ_DIR)/%.o: %.c
 
 $(NAME): $(OBJS) $(LIBFT)
 	@$(CC) $(CFLAGS) -o $(NAME) $(OBJS) $(LIBFT) $(LDFLAGS)
-	export LD_LIBRARY_PATH=glew-2.2.0/lib:$LD_LIBRARY_PATH
 
 $(LIBFT):
 	@echo "$(GREEN)Compiling the Libft ..."
